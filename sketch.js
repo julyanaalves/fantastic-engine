@@ -65,6 +65,7 @@ function setup() {
   }
   // Atualiza tela inicial para o nível 1
   showStartScreenForLevel();
+  updateOverlayForLevel();
 }
 
 function windowResized() {
@@ -131,9 +132,11 @@ function draw() {
   } else if (currentLevel === 2){
     if (gameStarted) updateTimer();
     drawLevel2();
+    drawSafeTopLine();
   } else if (currentLevel === 3){
     if (gameStarted) updateTimer();
     drawLevel3();
+    drawSafeTopLine();
   }
 }
 
@@ -294,11 +297,16 @@ function mouseReleased(){
         // organizar empilhamento visual (grid simples)
         const idx = z.collected - 1;
         const cols = 3;
-        const cellSize = s.size * 0.9;
-        const col = idx % cols;
+        const cellSize = 46; // tamanho fixo para alinhamento consistente
+        const gap = 10;
+        const totalWidth = cols*cellSize + (cols-1)*gap;
+        const startX = z.x + (z.w - totalWidth)/2;
         const row = Math.floor(idx / cols);
-        s.x = z.x + 20 + col * (cellSize + 6);
-        s.y = z.y + z.h/2 - 30 + row * (cellSize + 6);
+        const col = idx % cols;
+        const baseY = z.y + z.h/2 - cellSize/2 - 8; // leve ajuste vertical
+        s.x = startX + col*(cellSize+gap) + cellSize/2;
+        s.y = baseY + row*(cellSize+gap) + cellSize/2;
+        s.size = cellSize; // normaliza visual
         level2Effects.push({x:s.x,y:s.y,life:22});
         break;
       }
@@ -591,6 +599,10 @@ function findLinkIndexNear(x,y, radius){
   return -1;
 }
 
+function drawSafeTopLine(){
+  stroke(180,190,210,140); strokeWeight(2); line(0, SAFE_TOP, width, SAFE_TOP); noStroke();
+}
+
 // ===================== LEVEL 2 =====================
 function setupLevel2(){
   level2Shapes = [];
@@ -608,7 +620,7 @@ function setupLevel2(){
       level2Shapes.push({
         type,
         x: random(size, width-size),
-        y: random(size, height*0.55 - size),
+        y: random(SAFE_TOP + size, height*0.55 - size),
         size,
         baseColor: randomShapeColor(type),
         vx: random(-1,1),
@@ -631,7 +643,7 @@ function drawLevel2(){
       // bounce
       if (s.x < s.size) { s.x = s.size; s.vx *= -1; }
       if (s.x > width - s.size){ s.x = width - s.size; s.vx *= -1; }
-      if (s.y < s.size) { s.y = s.size; s.vy *= -1; }
+      if (s.y < SAFE_TOP + s.size) { s.y = SAFE_TOP + s.size; s.vy *= -1; }
       if (s.y > height*0.55 - s.size){ s.y = height*0.55 - s.size; s.vy *= -1; }
     }
   }
@@ -723,7 +735,7 @@ function setupLevel3(){
   orbs = [];
   level3Effects = [];
   for (let i=0;i<level3Required;i++){
-    orbs.push({ x: random(40,width-40), y: random(60,height-60), r: 14, collected:false, glow: random(0, TWO_PI) });
+    orbs.push({ x: random(40,width-40), y: random(SAFE_TOP+60,height-60), r: 14, collected:false, glow: random(0, TWO_PI) });
   }
 }
 
@@ -781,18 +793,45 @@ function drawSeed(){
   push();
   translate(seed.x, seed.y);
   noStroke();
-  // base da semente
-  fill(120,90,50);
-  ellipse(0,0,28,36);
-  // crescimento simples: folhas como círculos/ovais ascendentes
+  // tronco
+  const growth = seed.stage / level3Required;
+  const trunkH = 40 + growth * 120;
+  push();
+  translate(0,0);
+  fill(120,90,55);
+  rectMode(CENTER);
+  rect(0, -trunkH/2, 14, trunkH, 6);
+  pop();
+  // núcleo/raiz (semente na base)
+  fill(150,110,70);
+  ellipse(0,10,32,22);
+  // folhas em camadas - cada estágio adiciona um anel de folhas estilizadas
   for (let i=1;i<=seed.stage;i++){
-    const h = -20 - i*14;
-    fill(80,160,90, 180 - i*8);
-    ellipse(0,h, 20 + i*3, 12 + i*2);
-    if (i%2===0){
-      ellipse(-10,h+4, 14 + i*2, 10 + i);
-      ellipse(10,h+2, 14 + i*2, 10 + i);
+    const layerT = i/level3Required;
+    const y = - (trunkH*0.2 + (trunkH*0.55)*layerT);
+    const leafCount = 4 + Math.floor(i*0.8);
+    const radius = 22 + i*4;
+    for (let k=0;k<leafCount;k++){
+      const ang = (TWO_PI/leafCount)*k + frameCount*0.002;
+      const lx = cos(ang)*radius*0.7;
+      const ly = sin(ang)*radius*0.35;
+      const hueBase = 90 - i*3;
+      fill(80,150 + i*5, 90, 200 - i*6);
+      push();
+      translate(lx, y+ly);
+      rotate(ang);
+      ellipse(0,0, 26 - i*1.1, 12 - i*0.4);
+      pop();
     }
+    // pequena luz central por camada
+    fill(200,255,200,90 - i*5);
+    circle(0,y, 10 + i*2);
+  }
+  // brilho no topo quando completo
+  if (seed.stage >= level3Required){
+    const pulse = 8 + sin(frameCount*0.15)*4;
+    noFill(); stroke(255,240,160,180); strokeWeight(2);
+    circle(0, -trunkH*0.75, pulse*3);
   }
   pop();
 }
@@ -858,6 +897,7 @@ function gotoNextLevel(){
   initScene(); // reusa para limpar nível1 se voltar
   resetLevelSpecific();
   showStartScreenForLevel();
+  updateOverlayForLevel();
   const msg = document.querySelector('.message-final:not([data-kind="fail"])');
   if (msg) msg.remove();
 }
@@ -871,21 +911,29 @@ function restartCurrentLevel(){
   setTimerDisplay(currentTimeLimit());
   const msg = document.querySelector('.message-final:not([data-kind="fail"])');
   if (msg) msg.remove();
+  removeFailMessage();
   const timer = document.getElementById('timer');
   if (timer) timer.classList.remove('danger');
 }
 
-
-// Inicia o jogo quando usuário clica em "Clique para Iniciar"
-function startGame(){
-  if (gameStarted) return;
-  gameStarted = true;
-  startTime = millis();
-  const scr = document.getElementById('startScreen');
-  if (scr){
-    scr.classList.add('hidden');
-    setTimeout(()=> scr.remove(), 500);
+function updateOverlayForLevel(){
+  const titleEl = document.querySelector('#overlay h1');
+  const hintEl = document.querySelector('#overlay .hint');
+  if (!titleEl || !hintEl) return;
+  if (currentLevel === 1){
+    titleEl.textContent = 'Nível 1: O Construtor de Pontes';
+    hintEl.innerHTML = 'Clique para adicionar elos e conecte as duas ilhas sem tocar nos obstáculos. R reinicia, Backspace/Undo desfaz.';
+  } else if (currentLevel === 2){
+    titleEl.textContent = 'Nível 2: O Organizador de Ideias';
+    hintEl.innerHTML = 'Arraste cada forma até a caixa do mesmo símbolo no rodapé. Complete antes do tempo acabar. R reinicia.';
+  } else if (currentLevel === 3){
+    titleEl.textContent = 'Nível 3: A Semente da Curiosidade';
+    hintEl.innerHTML = 'Mova o mouse para coletar pontos de luz e fazer a semente crescer por estágios. R reinicia.';
   }
-  // garantir timer reset visual
-  setTimerDisplay(currentTimeLimit());
 }
+
+// Limite superior jogável (evita shapes sob cabeçalho)
+const SAFE_TOP = 140; // px abaixo do cabeçalho
+
+
+// (função startGame já definida anteriormente; duplicata removida)

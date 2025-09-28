@@ -33,6 +33,7 @@ let seed = { x:0, y:0, stage:0 }; // stage 0..requiredOrbs
 let orbs = []; // {x,y,r,collected, glow}
 const level3Required = 6; // coleta para completar
 let level3Effects = []; // efeitos em coleta
+let blossomParticles = []; // partículas/flores ao completar
 
 function resetLevelSpecific(){
   if (currentLevel === 1){
@@ -734,6 +735,7 @@ function setupLevel3(){
   seed = { x: width/2, y: height/2, stage:0 };
   orbs = [];
   level3Effects = [];
+  blossomParticles = [];
   for (let i=0;i<level3Required;i++){
     orbs.push({ x: random(40,width-40), y: random(SAFE_TOP+60,height-60), r: 14, collected:false, glow: random(0, TWO_PI) });
   }
@@ -778,6 +780,11 @@ function drawLevel3(){
   }
   // desenhar seed (estágios)
   drawSeed();
+  // partículas de flores (se completo)
+  if (seed.stage >= level3Required){
+    updateBlossomParticles();
+    renderBlossomParticles();
+  }
   // efeitos coleta
   for (let i=level3Effects.length-1;i>=0;i--){
     const e = level3Effects[i];
@@ -805,64 +812,135 @@ function drawSeed(){
   // núcleo/raiz (semente na base)
   fill(150,110,70);
   ellipse(0,10,32,22);
-  // folhas distribuídas ao longo do tronco formando copa ascendente
-  // Número de "faixas" de folhas aumenta com o estágio
-  const bands = seed.stage; // de 0 até level3Required
+  // folhas distribuídas com menos espaço vertical e iniciando mais alto
+  // bandas começam já em estágio 1 perto do topo para evitar "tronco nu"
+  const bands = seed.stage;
+  const topFactor = 0.78; // quão alto as folhas podem chegar (fração do tronco)
   for (let b=1; b<=bands; b++){
-    // posição vertical da faixa (mais alta conforme b cresce)
-    const tBand = b / (level3Required+0.5); // normalização suave
-    const bandY = -trunkH * (0.15 + 0.65 * tBand); // sobe até perto do topo
-    // cada faixa tem um número de clusters de folhas
-    const clusters = 3 + Math.floor(b*0.8);
+    const tBand = b / (level3Required+0.2);
+    // aproxima as bandas do topo ao invés da base
+    const bandY = -trunkH * (0.25 + topFactor * tBand * 0.85); 
+    const clusters = 4 + Math.floor(b*0.9); // mais clusters → mais densidade
     for (let c=0; c<clusters; c++){
-      const ang = (TWO_PI/clusters)*c + frameCount*0.003 * (0.3 + b*0.1);
-      const spread = 14 + b*3; // raio horizontal
+      const ang = (TWO_PI/clusters)*c + frameCount*0.0025 * (0.4 + b*0.08);
+      const spread = 10 + b*2.8; // raio horizontal menor no começo, cresce sutil
       const cx = cos(ang)*spread;
-      const cy = sin(ang)*spread*0.35; // achatado vertical
-      const leavesPerCluster = 2 + Math.floor(b*0.5);
+      const cy = sin(ang)*spread*0.32;
+      const leavesPerCluster = 3 + Math.floor(b*0.4);
       for (let l=0; l<leavesPerCluster; l++){
-        const jitterAng = ang + l*0.6;
-        const lx = cx + cos(jitterAng)*(6 + l*1.2);
-        const ly = bandY + cy + sin(jitterAng)*(3 + l*0.6);
-        const sizeFactor = 1 - l*0.12;
-        const leafW = 20*sizeFactor - b*0.5;
-        const leafH = 10*sizeFactor - b*0.25;
-        fill(70 + b*3, 160 + b*4, 90, 170 - b*4);
+        const jitterAng = ang + l*0.45;
+        const radial = 5 + l*1.5;
+        const lx = cx + cos(jitterAng)*radial;
+        const ly = bandY + cy + sin(jitterAng)*radial*0.4;
+        const sizeFactor = 1 - l*0.1;
+        const leafW = 18*sizeFactor - b*0.35;
+        const leafH = 9*sizeFactor - b*0.18;
+        // ruído de cor sutil por cluster para quebrar uniformidade
+        const noiseShift = sin(frameCount*0.01 + c*1.7 + b)*4;
+        const gBase = 165 + b*3.5 + noiseShift;
+        fill(68 + b*2.5, gBase, 92, 185 - b*5);
         push();
         translate(lx, ly);
-        rotate(jitterAng + sin(frameCount*0.01 + b)*0.1);
-        ellipse(0,0, leafW, leafH);
+        rotate(jitterAng + sin(frameCount*0.01 + b*0.6)*0.12);
+        ellipse(0,0, max(6,leafW), max(3,leafH));
         pop();
       }
     }
   }
-  // copa no topo quando estágio >= 2 (preenche "ponta")
-  if (seed.stage >= 2){
-    const topY = -trunkH*0.82;
-    const capLeaves = 6 + seed.stage*2;
+  // copa sempre visível a partir do estágio 1 com densidade crescente
+  if (seed.stage >= 1){
+    const topY = -trunkH*0.88;
+    const capLeaves = 5 + seed.stage*3;
     for (let i=0;i<capLeaves;i++){
-      const ang = (TWO_PI/capLeaves)*i + frameCount*0.004;
-      const rad = 10 + seed.stage*2.2;
-      const lx = cos(ang)*rad*0.8;
-      const ly = sin(ang)*rad*0.5;
-      fill(70 + seed.stage*3, 170 + seed.stage*4, 95, 180);
+      const ang = (TWO_PI/capLeaves)*i + frameCount*0.0035;
+      // raio maior e jitter alternado para espaçar
+      const baseRad = 10 + seed.stage*3.0;
+      const jitter = (i % 2 === 0 ? 1 : -1) * 2.2;
+      const rad = baseRad + jitter;
+      const lx = cos(ang)*rad*0.95; // mais afastado lateralmente
+      const ly = sin(ang)*rad*0.60; // ligeiro aumento vertical
+      const noiseShift = sin(frameCount*0.015 + i*0.9)*5;
+      fill(65 + seed.stage*3, 175 + seed.stage*4 + noiseShift, 96, 190);
       push();
       translate(lx, topY + ly);
-      rotate(ang);
-      ellipse(0,0, 18 - seed.stage*0.4, 9 - seed.stage*0.25);
+      rotate(ang*0.9);
+      // folhas menores para reduzir sobreposição
+      ellipse(0,0, 14 - seed.stage*0.30, 7 - seed.stage*0.18);
       pop();
     }
-    // luz central no topo
-    fill(210,255,210,120);
-    circle(0, topY, 14 + seed.stage*1.3);
+    // luz central
+    fill(210,255,210,110);
+    circle(0, topY, 10 + seed.stage*1.1);
   }
+  // sombra interna/halo para profundidade (atrás das folhas)
+  push();
+  blendMode(MULTIPLY);
+  noStroke();
+  const shadeRadius = 26 + growth*30;
+  for (let r=shadeRadius; r>0; r-=6){
+    const alpha = map(r,0,shadeRadius,60,4);
+    fill(40,80,40, alpha);
+    ellipse(0, -trunkH*0.55, r*1.1, r*0.85);
+  }
+  pop();
+  // galhos finos (linhas) atrás das folhas
+  push();
+  stroke(100,80,55,120);
+  strokeWeight(2);
+  for (let g=0; g<bands; g++){
+    const gy = -trunkH * (0.28 + topFactor * ((g+1)/(level3Required+0.5))*0.8);
+    line(0, -trunkH*0.1, cos(g)*8, gy);
+    // ramificações laterais
+    strokeWeight(1.3);
+    line(cos(g)*8, gy, cos(g)*16, gy - 6);
+  }
+  pop();
   // brilho no topo quando completo
   if (seed.stage >= level3Required){
     const pulse = 8 + sin(frameCount*0.15)*4;
     noFill(); stroke(255,240,160,180); strokeWeight(2);
     circle(0, -trunkH*0.75, pulse*3);
+    // gerar partículas/florzinhas esporadicamente
+    if (frameCount % 4 === 0 && blossomParticles.length < 160){
+      const angle = random(TWO_PI);
+      const rad = 10 + random(6,34);
+      blossomParticles.push({
+        x: seed.x + cos(angle)*rad,
+        y: seed.y - trunkH*0.85 + sin(angle)*rad*0.6,
+        vx: cos(angle)*random(0.2,0.8),
+        vy: -random(0.4,1.2),
+        life: 120 + random(40),
+        hue: random([50,52,48,46])
+      });
+    }
   }
   pop();
+}
+
+function updateBlossomParticles(){
+  for (let i=blossomParticles.length-1;i>=0;i--){
+    const p = blossomParticles[i];
+    p.life--;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy -= 0.002; // leve flutuação ascendente
+    if (p.life<=0) blossomParticles.splice(i,1);
+  }
+}
+function renderBlossomParticles(){
+  push();
+  colorMode(HSB,360,100,100,100);
+  noStroke();
+  for (const p of blossomParticles){
+    const t = p.life/160;
+    const alpha = map(t,0,1,0,85);
+    fill(p.hue, 80, 100, alpha);
+    circle(p.x, p.y, 5 + (1-t)*3);
+    fill(p.hue, 60, 100, alpha*1.2);
+    circle(p.x, p.y, 2 + (1-t)*2);
+  }
+  pop();
+  colorMode(RGB,255,255,255,255);
 }
 
 // ===================== TRANSIÇÕES / TELAS =====================

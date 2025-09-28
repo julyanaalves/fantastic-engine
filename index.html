@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>O Construtor de Pontes</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Script p5.js sem integrity para evitar bloqueio local -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        if (typeof window.p5 === 'undefined') {
+          const warn = document.createElement('div');
+          warn.style.position='fixed';
+          warn.style.top='70px';
+          warn.style.left='50%';
+            warn.style.transform='translateX(-50%)';
+          warn.style.background='#ff3768';
+          warn.style.color='#fff';
+          warn.style.padding='10px 16px';
+          warn.style.font='14px/1.3 system-ui, Arial';
+          warn.style.borderRadius='6px';
+          warn.style.boxShadow='0 4px 14px -4px rgba(0,0,0,.5)';
+          warn.textContent = 'Falha ao carregar p5.js (verifique conexão ou bloqueio de rede).';
+          document.body.appendChild(warn);
+        }
+      }, 800);
+    });
+  </script>
+  <script src="sketch.js" defer></script>
+</head>
+<body>
+  <div id="startScreen">
+    <div class="panel">
+      <h1>O Construtor de Pontes</h1>
+      <p class="intro">Conecte as duas ilhas criando segmentos (elos) sem colidir com os obstáculos móveis.<br/><br/>
+      <strong>Como jogar:</strong></p>
+      <ul class="rules">
+        <li>Clique (ou toque) para adicionar cada novo elo a partir do último ponto.</li>
+        <li>Evite que o segmento encoste em qualquer obstáculo.</li>
+        <li>Você pode desfazer clicando em um elo existente ou usar <kbd>Undo</kbd>/<kbd>Backspace</kbd>.</li>
+        <li>Complete ligando uma ilha azul à outra antes do tempo acabar.</li>
+        <li>Pressione <kbd>R</kbd> para reiniciar a qualquer momento.</li>
+      </ul>
+      <button id="startBtn">Clique para Iniciar</button>
+      <small class="note">Dica: planeje o caminho observando o movimento periódico dos obstáculos.</small>
+    </div>
+  </div>
+  <div id="container">
+    <div id="overlay">
+      <h1>O Construtor de Pontes</h1>
+      <div id="timeBarWrap"><div id="timeBar"></div></div>
+      <p class="hint">Clique (ou toque) para adicionar elos e conecte as duas ilhas (em azul) sem tocar nos obstáculos (em vermelho). Pressione R para reiniciar e Backspace para desfazer.</p>
+    </div>
+    <div id="timer">00:30</div>
+    <button id="undoBtn" title="Remover último elo (Backspace)">Undo</button>
+  </div>
+</body>
+</html>

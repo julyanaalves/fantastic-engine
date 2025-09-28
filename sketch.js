@@ -805,27 +805,56 @@ function drawSeed(){
   // núcleo/raiz (semente na base)
   fill(150,110,70);
   ellipse(0,10,32,22);
-  // folhas em camadas - cada estágio adiciona um anel de folhas estilizadas
-  for (let i=1;i<=seed.stage;i++){
-    const layerT = i/level3Required;
-    const y = - (trunkH*0.2 + (trunkH*0.55)*layerT);
-    const leafCount = 4 + Math.floor(i*0.8);
-    const radius = 22 + i*4;
-    for (let k=0;k<leafCount;k++){
-      const ang = (TWO_PI/leafCount)*k + frameCount*0.002;
-      const lx = cos(ang)*radius*0.7;
-      const ly = sin(ang)*radius*0.35;
-      const hueBase = 90 - i*3;
-      fill(80,150 + i*5, 90, 200 - i*6);
+  // folhas distribuídas ao longo do tronco formando copa ascendente
+  // Número de "faixas" de folhas aumenta com o estágio
+  const bands = seed.stage; // de 0 até level3Required
+  for (let b=1; b<=bands; b++){
+    // posição vertical da faixa (mais alta conforme b cresce)
+    const tBand = b / (level3Required+0.5); // normalização suave
+    const bandY = -trunkH * (0.15 + 0.65 * tBand); // sobe até perto do topo
+    // cada faixa tem um número de clusters de folhas
+    const clusters = 3 + Math.floor(b*0.8);
+    for (let c=0; c<clusters; c++){
+      const ang = (TWO_PI/clusters)*c + frameCount*0.003 * (0.3 + b*0.1);
+      const spread = 14 + b*3; // raio horizontal
+      const cx = cos(ang)*spread;
+      const cy = sin(ang)*spread*0.35; // achatado vertical
+      const leavesPerCluster = 2 + Math.floor(b*0.5);
+      for (let l=0; l<leavesPerCluster; l++){
+        const jitterAng = ang + l*0.6;
+        const lx = cx + cos(jitterAng)*(6 + l*1.2);
+        const ly = bandY + cy + sin(jitterAng)*(3 + l*0.6);
+        const sizeFactor = 1 - l*0.12;
+        const leafW = 20*sizeFactor - b*0.5;
+        const leafH = 10*sizeFactor - b*0.25;
+        fill(70 + b*3, 160 + b*4, 90, 170 - b*4);
+        push();
+        translate(lx, ly);
+        rotate(jitterAng + sin(frameCount*0.01 + b)*0.1);
+        ellipse(0,0, leafW, leafH);
+        pop();
+      }
+    }
+  }
+  // copa no topo quando estágio >= 2 (preenche "ponta")
+  if (seed.stage >= 2){
+    const topY = -trunkH*0.82;
+    const capLeaves = 6 + seed.stage*2;
+    for (let i=0;i<capLeaves;i++){
+      const ang = (TWO_PI/capLeaves)*i + frameCount*0.004;
+      const rad = 10 + seed.stage*2.2;
+      const lx = cos(ang)*rad*0.8;
+      const ly = sin(ang)*rad*0.5;
+      fill(70 + seed.stage*3, 170 + seed.stage*4, 95, 180);
       push();
-      translate(lx, y+ly);
+      translate(lx, topY + ly);
       rotate(ang);
-      ellipse(0,0, 26 - i*1.1, 12 - i*0.4);
+      ellipse(0,0, 18 - seed.stage*0.4, 9 - seed.stage*0.25);
       pop();
     }
-    // pequena luz central por camada
-    fill(200,255,200,90 - i*5);
-    circle(0,y, 10 + i*2);
+    // luz central no topo
+    fill(210,255,210,120);
+    circle(0, topY, 14 + seed.stage*1.3);
   }
   // brilho no topo quando completo
   if (seed.stage >= level3Required){

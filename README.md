@@ -1,4 +1,4 @@
-<div align="center">
+<div align="center>
 
 # 🌟 Experiência Interativa (Processo Seletivo Apple Developer Academy UFPE)
 
@@ -12,7 +12,12 @@ Uma jornada em **3 mini-níveis** construídos com **p5.js**, cada um representa
 
 [![p5.js](https://img.shields.io/badge/p5.js-interactive-ED225D?logo=p5.js&logoColor=white)](https://p5js.org/) ![Status](https://img.shields.io/badge/status-protótipo-orange) ![Plataforma](https://img.shields.io/badge/alvo-browser-blue) ![Níveis](https://img.shields.io/badge/níveis-3-brightgreen) [![Licença: CC BY-NC-SA 4.0](https://img.shields.io/badge/licença-CC%20BY--NC--SA%204.0-purple)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.pt_BR)
 
-**TL;DR**: Abra `index.html`, clique em Iniciar. Complete 3 minigames (cada um com 20s). `R` reinicia. `Backspace` remove último elo no Nível 1. Arraste as formas no Nível 2. No Nível 3 mova o mouse para crescer a semente.
+<details>
+<summary><strong>Resumo rápido (clique para expandir)</strong></summary>
+
+Abra `index.html`, clique em Iniciar. Complete 3 minigames (cada um com 20s). `R` reinicia. `Backspace` remove último elo no Nível 1. Arraste as formas no Nível 2. No Nível 3 mova o mouse para crescer a semente.
+
+</details>
 
 Versão resumida para avaliadores: veja `README_SIMPLES.md`.
 
